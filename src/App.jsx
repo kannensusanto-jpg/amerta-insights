@@ -10,7 +10,6 @@ const IGNORE_SHEETS = ["NON PPN OKTOBER","REKAP CV AMERTA","REKAP"];
 
 // ─── BRAND COLORS (from logo) ─────────────────────────────────────────────────
 const NAVY  = "#1B3D8F";
-const GRAY  = "#8A9BB0";
 const BLUE2 = "#2E5FC2";
 const TEAL  = "#0D9488";
 const AMBER = "#D97706";
