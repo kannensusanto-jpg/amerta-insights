@@ -305,12 +305,11 @@ export default function App() {
     const sales    = rows.filter(r=>r.txType==="Sale");
     const nonSales = rows.filter(r=>r.txType!=="Sale");
 
-    const totalRev  = sales.reduce((a,r)=>a+r.totalInv,0);
-    const totalBase = sales.reduce((a,r)=>a+r.total,0);
+    const totalRev  = sales.reduce((a,r)=>a+r.total,0);
     const totalQty  = sales.reduce((a,r)=>a+r.qty,0);
     const totalPPN  = sales.reduce((a,r)=>a+r.ppn,0);
     const avgInv    = totalRev/(sales.length||1);
-    const revenuePerKg = totalQty>0?totalBase/totalQty:0;
+    const revenuePerKg = totalQty>0?totalRev/totalQty:0;
 
     const typeCounts = {};
     rows.forEach(r=>{ typeCounts[r.txType]=(typeCounts[r.txType]||0)+1; });
@@ -319,7 +318,7 @@ export default function App() {
     const custMap = {};
     sales.forEach(r=>{
       if (!custMap[r.customer]) custMap[r.customer]={revenue:0,qty:0,count:0};
-      custMap[r.customer].revenue+=r.totalInv;
+      custMap[r.customer].revenue+=r.total;
       custMap[r.customer].qty+=r.qty;
       custMap[r.customer].count+=1;
     });
@@ -334,7 +333,7 @@ export default function App() {
       const k = r.month.substring(0,3).toUpperCase()+" "+String(r.date.getDate()).padStart(2,"0");
       const _sort = r.date.getTime();
       if (!dayMap[k]) dayMap[k]={date:k,revenue:0,qty:0,_sort};
-      dayMap[k].revenue+=r.totalInv; dayMap[k].qty+=r.qty;
+      dayMap[k].revenue+=r.total; dayMap[k].qty+=r.qty;
     });
     const dailyTrend = Object.values(dayMap).sort((a,b)=>a._sort-b._sort);
 
@@ -342,7 +341,7 @@ export default function App() {
     sales.forEach(r=>{
       const sp=r.sales||"—";
       if (!spMap[sp]) spMap[sp]={name:sp,revenue:0,qty:0,count:0,customers:new Set()};
-      spMap[sp].revenue+=r.totalInv; spMap[sp].qty+=r.qty; spMap[sp].count+=1;
+      spMap[sp].revenue+=r.total; spMap[sp].qty+=r.qty; spMap[sp].count+=1;
       spMap[sp].customers.add(r.customer);
     });
     const spArr = Object.values(spMap).map(sp=>({
@@ -355,7 +354,7 @@ export default function App() {
     if (data) {
       data.months.forEach(m=>{
         const ms=data.allRows.filter(r=>r.month===m&&r.txType==="Sale");
-        momMap[m]={month:m,revenue:ms.reduce((a,r)=>a+r.totalInv,0),qty:ms.reduce((a,r)=>a+r.qty,0),invoices:ms.length};
+        momMap[m]={month:m,revenue:ms.reduce((a,r)=>a+r.total,0),qty:ms.reduce((a,r)=>a+r.qty,0),invoices:ms.length};
       });
     }
     const momTrend = Object.values(momMap);
@@ -368,7 +367,7 @@ export default function App() {
           const sp=r.sales||"—";
           if (!spMonthMap[sp]) spMonthMap[sp]={};
           if (!spMonthMap[sp][m]) spMonthMap[sp][m]=0;
-          spMonthMap[sp][m]+=r.totalInv;
+          spMonthMap[sp][m]+=r.total;
         });
       });
     }
@@ -378,15 +377,15 @@ export default function App() {
     const top5rev = topByRev.slice(0,5).reduce((a,r)=>a+r.revenue,0);
     const top5pct = totalRev>0?(top5rev/totalRev)*100:0;
     const top1pct = totalRev>0?((topByRev[0]?.revenue||0)/totalRev)*100:0;
-    const biggestInv = [...sales].sort((a,b)=>b.totalInv-a.totalInv)[0];
+    const biggestInv = [...sales].sort((a,b)=>b.total-a.total)[0];
     const activeDays = new Set(sales.filter(r=>r.date).map(r=>`${r.month}-${r.date.getDate()}`)).size;
     const dailyAvg   = activeDays>0?totalRev/activeDays:0;
     const bestDay    = dailyTrend.reduce((a,b)=>b.revenue>a.revenue?b:a,dailyTrend[0]||{});
     const buckets    = {"<10Jt":0,"10–50Jt":0,"50–100Jt":0,"100–500Jt":0,">500Jt":0};
-    sales.forEach(r=>{ const v=r.totalInv; if(v<10e6)buckets["<10Jt"]++; else if(v<50e6)buckets["10–50Jt"]++; else if(v<100e6)buckets["50–100Jt"]++; else if(v<500e6)buckets["100–500Jt"]++; else buckets[">500Jt"]++; });
+    sales.forEach(r=>{ const v=r.total; if(v<10e6)buckets["<10Jt"]++; else if(v<50e6)buckets["10–50Jt"]++; else if(v<100e6)buckets["50–100Jt"]++; else if(v<500e6)buckets["100–500Jt"]++; else buckets[">500Jt"]++; });
     const bucketData = Object.entries(buckets).map(([name,value])=>({name,value}));
 
-    return { totalRev,totalBase,totalQty,totalPPN,avgInv,revenuePerKg,invoiceCount:sales.length,custCount:custArr.length,typeCounts,typeSlices,topByRev,topByQty,topByOrders,custArr,dailyTrend,activeDays,dailyAvg,bestDay,top5pct,top1pct,biggestInv,bucketData,nonSales,spArr,momTrend,spTrend,topSPs };
+    return { totalRev,totalQty,totalPPN,avgInv,revenuePerKg,invoiceCount:sales.length,custCount:custArr.length,typeCounts,typeSlices,topByRev,topByQty,topByOrders,custArr,dailyTrend,activeDays,dailyAvg,bestDay,top5pct,top1pct,biggestInv,bucketData,nonSales,spArr,momTrend,spTrend,topSPs };
   }, [rows, data]);
 
   const TABS = [
@@ -403,7 +402,7 @@ export default function App() {
   const renderOverview = () => (
     <>
       <div className="kpi-grid">
-        <div className="kpi navy"><div className="kpi-lbl">Total Pendapatan</div><div className="kpi-val">{fmt(s.totalRev)}</div><div className="kpi-sub">Invoice Sale · incl. PPN</div></div>
+        <div className="kpi navy"><div className="kpi-lbl">Total Pendapatan</div><div className="kpi-val">{fmt(s.totalRev)}</div><div className="kpi-sub">Invoice Sale · excl. PPN</div></div>
         <div className="kpi amber"><div className="kpi-lbl">Total PPN Dipungut</div><div className="kpi-val">{fmt(s.totalPPN)}</div><div className="kpi-sub">PPN 11% dari semua Sale</div></div>
         <div className="kpi teal"><div className="kpi-lbl">Total Volume</div><div className="kpi-val">{fmtKg(s.totalQty)}</div><div className="kpi-sub">Total berat (Sale only)</div></div>
         <div className="kpi blue">
@@ -603,7 +602,7 @@ export default function App() {
       </div>
 
       <div className="card">
-        <div className="card-title">Revenue per Salesperson <span>Sale only · incl. PPN</span></div>
+        <div className="card-title">Revenue per Salesperson <span>Sale only · excl. PPN</span></div>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={s.spArr} margin={{top:5,right:10,bottom:5,left:10}}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9"/>
@@ -646,7 +645,7 @@ export default function App() {
             <hr className="sp-divider"/>
             <div className="sp-stat"><span className="sp-stat-lbl">Avg per Invoice</span><span className="sp-stat-val">{fmt(sp.avgInv)}</span></div>
             <div className="sp-stat"><span className="sp-stat-lbl">Total Volume</span><span className="sp-stat-val">{fmtKg(sp.qty)}</span></div>
-            <div className="sp-stat"><span className="sp-stat-lbl">Rp/kg (excl. PPN)</span><span className="sp-stat-val">Rp {sp.qty>0?Math.round((sp.revenue/1.11)/sp.qty).toLocaleString("id-ID"):"—"}</span></div>
+            <div className="sp-stat"><span className="sp-stat-lbl">Rp/kg</span><span className="sp-stat-val">Rp {sp.qty>0?Math.round(sp.revenue/sp.qty).toLocaleString("id-ID"):"—"}</span></div>
             <div style={{marginTop:14}}>
               <div className="prog-bar" style={{height:4}}><div className="prog-fill" style={{width:`${sp.revenueShare}%`,background:CHART_COLORS[i%CHART_COLORS.length]}}/></div>
             </div>
@@ -669,7 +668,7 @@ export default function App() {
                 <td className="num">{sp.custCount}</td>
                 <td className="num">{fmt(sp.avgInv)}</td>
                 <td className="num">{Math.round(sp.qty).toLocaleString("id-ID")}</td>
-                <td className="num">Rp {sp.qty>0?Math.round((sp.revenue/1.11)/sp.qty).toLocaleString("id-ID"):"—"}</td>
+                <td className="num">Rp {sp.qty>0?Math.round(sp.revenue/sp.qty).toLocaleString("id-ID"):"—"}</td>
               </tr>
             ))}</tbody>
           </table>
@@ -726,10 +725,10 @@ export default function App() {
       <>
         <div className="kpi-grid">
           <div className="kpi navy"><div className="kpi-lbl">Revenue / Hari Aktif</div><div className="kpi-val">{fmt(s.dailyAvg)}</div><div className="kpi-sub">{s.activeDays} hari aktif</div></div>
-          <div className="kpi purple"><div className="kpi-lbl">Harga Rata-rata / kg</div><div className="kpi-val">Rp {Math.round(s.revenuePerKg).toLocaleString("id-ID")}</div><div className="kpi-sub">Sebelum PPN · pricing efficiency</div></div>
+          <div className="kpi purple"><div className="kpi-lbl">Harga Rata-rata / kg</div><div className="kpi-val">Rp {Math.round(s.revenuePerKg).toLocaleString("id-ID")}</div><div className="kpi-sub">Excl. PPN · pricing efficiency</div></div>
           <div className="kpi amber"><div className="kpi-lbl">Konsentrasi Top 5</div><div className="kpi-val">{s.top5pct.toFixed(1)}%</div><div className="kpi-sub">Share revenue top 5 customer</div></div>
           <div className="kpi red"><div className="kpi-lbl">Konsentrasi #1 Customer</div><div className="kpi-val">{s.top1pct.toFixed(1)}%</div><div className="kpi-sub">{s.topByRev[0]?.name}</div></div>
-          <div className="kpi teal"><div className="kpi-lbl">Invoice Terbesar</div><div className="kpi-val">{fmt(s.biggestInv?.totalInv||0)}</div><div className="kpi-sub">{s.biggestInv?.customer}</div></div>
+          <div className="kpi teal"><div className="kpi-lbl">Invoice Terbesar</div><div className="kpi-val">{fmt(s.biggestInv?.total||0)}</div><div className="kpi-sub">{s.biggestInv?.customer}</div></div>
           <div className="kpi blue"><div className="kpi-lbl">Hari Terbaik</div><div className="kpi-val">{s.bestDay?.date||"—"}</div><div className="kpi-sub">{fmt(s.bestDay?.revenue||0)}</div></div>
         </div>
 
