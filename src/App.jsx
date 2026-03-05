@@ -197,8 +197,8 @@ const css = `
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 const fmt = (n) =>
-  n >= 1e9 ? `Rp ${(n/1e9).toFixed(2)}M`
-  : n >= 1e6 ? `Rp ${(n/1e6).toFixed(1)}Jt`
+  n >= 1e9 ? `Rp ${(n/1e9).toFixed(3)}M`
+  : n >= 1e6 ? `Rp ${(n/1e6).toFixed(3)}Jt`
   : `Rp ${Math.round(n).toLocaleString("id-ID")}`;
 
 const fmtShort = (n) =>
