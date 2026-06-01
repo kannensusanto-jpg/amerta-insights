@@ -1016,11 +1016,9 @@ export default function App() {
                   ⬇ Export PDF
                 </button>
               )}
-              {data && (
-                <button className="swap-btn swap-btn-outline" onClick={downloadBudgetTemplate}>
-                  ⬇ Budget Template
-                </button>
-              )}
+              <button className="swap-btn swap-btn-outline" onClick={downloadBudgetTemplate}>
+                ⬇ Budget Template
+              </button>
               <button className="swap-btn swap-btn-outline" style={{position:"relative"}}>
                 {Object.keys(budget).length>0?"✓ Budget Loaded":"↑ Upload Budget"}
                 <input type="file" accept=".xlsx,.xls" onChange={e=>loadBudget(e.target.files[0])} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
