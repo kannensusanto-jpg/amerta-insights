@@ -905,48 +905,92 @@ export default function App() {
   // ══════════════════════════════════════════════════════════
   const buildContext = () => {
     if (!data || !s) return "No data loaded.";
-    let ctx = `MONTHS LOADED: ${data.months.join(", ")}\n\n`;
-    ctx += `TOTAL REVENUE (all months): Rp ${s.totalRev.toLocaleString("id-ID")}\n`;
-    ctx += `TOTAL INVOICES: ${s.invoiceCount} | UNIQUE CUSTOMERS: ${s.custCount}\n\n`;
+    const idr = v => `Rp ${v.toLocaleString("id-ID")}`;
+    let ctx = "";
 
-    ctx += "MONTHLY SUMMARY:\n";
+    // ── OVERVIEW ──────────────────────────────────────────────
+    ctx += "=== OVERVIEW ===\n";
+    ctx += `Months loaded: ${data.months.join(", ")}\n`;
+    ctx += `Total Revenue: ${idr(s.totalRev)} | PPN: ${idr(s.totalPPN)} | Volume: ${Math.round(s.totalQty).toLocaleString("id-ID")} kg\n`;
+    ctx += `Total Invoices: ${s.invoiceCount} | Unique Customers: ${s.custCount} | Avg/Invoice: ${idr(Math.round(s.avgInv))}\n`;
+    ctx += `Invoice types: ${Object.entries(s.typeCounts).map(([t,n])=>`${t}: ${n}`).join(", ")}\n\n`;
+
+    ctx += "Monthly summary:\n";
     s.momTrend.forEach(m => {
-      ctx += `  ${m.month}: Revenue Rp ${m.revenue.toLocaleString("id-ID")}, ${m.invoices} invoices`;
-      if (m.target>0) ctx += `, Target Rp ${m.target.toLocaleString("id-ID")}, Achievement ${m.revenue>0?((m.revenue/m.target)*100).toFixed(1):"0"}%`;
+      ctx += `  ${m.month}: ${idr(m.revenue)}, ${m.invoices} invoices, ${Math.round(m.qty||0).toLocaleString("id-ID")} kg`;
+      if (m.target>0) ctx += `, Target ${idr(m.target)}, Achievement ${((m.revenue/m.target)*100).toFixed(1)}%`;
       ctx += "\n";
     });
 
-    ctx += "\nSALESPERSON PERFORMANCE:\n";
+    ctx += "\nDaily revenue:\n";
+    s.dailyTrend.forEach(d => {
+      ctx += `  ${d.date}: ${idr(d.revenue)}, ${Math.round(d.qty).toLocaleString("id-ID")} kg\n`;
+    });
+    const daySorted = [...s.dailyTrend].sort((a,b)=>a.revenue-b.revenue);
+    if (daySorted.length) {
+      ctx += `Lowest day: ${daySorted[0].date} ${idr(daySorted[0].revenue)}\n`;
+      ctx += `Highest day: ${daySorted[daySorted.length-1].date} ${idr(daySorted[daySorted.length-1].revenue)}\n`;
+    }
+
+    // ── CUSTOMERS ─────────────────────────────────────────────
+    ctx += "\n=== CUSTOMERS ===\n";
+    ctx += "All customers (sorted by revenue):\n";
+    [...s.custArr].sort((a,b)=>b.revenue-a.revenue).forEach((c,i) => {
+      ctx += `  ${i+1}. ${c.name}: ${idr(c.revenue)}, ${c.count} orders, ${Math.round(c.qty).toLocaleString("id-ID")} kg\n`;
+    });
+
+    ctx += "\nCustomer orders per month:\n";
+    data.months.forEach(m => {
+      const mSales = data.allRows.filter(r=>r.month===m&&r.txType==="Sale");
+      const custMonth = {};
+      mSales.forEach(r=>{ if(!custMonth[r.customer])custMonth[r.customer]=0; custMonth[r.customer]+=r.total; });
+      const top = Object.entries(custMonth).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      ctx += `  ${m}: ${top.map(([c,v])=>`${c} ${idr(Math.round(v))}`).join(", ")}\n`;
+    });
+
+    // ── SALESPERSON ───────────────────────────────────────────
+    ctx += "\n=== SALESPERSON ===\n";
     s.spArr.forEach((sp,i) => {
-      ctx += `  ${i+1}. ${sp.name}: Revenue Rp ${sp.revenue.toLocaleString("id-ID")}, ${sp.count} invoices, ${sp.custCount} customers`;
-      if (sp.target>0) ctx += `, Target Rp ${sp.target.toLocaleString("id-ID")}, Achievement ${sp.achievement?.toFixed(1)}%`;
+      ctx += `  ${i+1}. ${sp.name}: ${idr(sp.revenue)}, ${sp.count} invoices, ${sp.custCount} customers, Avg ${idr(Math.round(sp.avgInv))}, ${Math.round(sp.qty).toLocaleString("id-ID")} kg`;
+      if (sp.target>0) ctx += `, Target ${idr(sp.target)}, Achievement ${sp.achievement?.toFixed(1)}%`;
       ctx += "\n";
     });
 
-    ctx += "\nMONTHLY SP BREAKDOWN:\n";
+    ctx += "\nSalesperson by month:\n";
     data.months.forEach(m => {
       const mSales = data.allRows.filter(r=>r.month===m&&r.txType==="Sale");
       const spMonth = {};
-      mSales.forEach(r=>{ if(!spMonth[r.sales])spMonth[r.sales]=0; spMonth[r.sales]+=r.total; });
-      const sorted = Object.entries(spMonth).sort((a,b)=>b[1]-a[1]);
-      ctx += `  ${m}: ${sorted.map(([sp,rev])=>`${sp} Rp ${Math.round(rev/1e6)}Jt`).join(", ")}\n`;
+      mSales.forEach(r=>{ if(!spMonth[r.sales])spMonth[r.sales]={rev:0,count:0}; spMonth[r.sales].rev+=r.total; spMonth[r.sales].count+=1; });
+      const sorted = Object.entries(spMonth).sort((a,b)=>b[1].rev-a[1].rev);
+      ctx += `  ${m}: ${sorted.map(([sp,v])=>`${sp} ${idr(Math.round(v.rev))} (${v.count} inv)`).join(", ")}\n`;
     });
 
-    ctx += "\nTOP 10 CUSTOMERS:\n";
-    s.topByRev.forEach((c,i)=>{
-      ctx += `  ${i+1}. ${c.name}: Revenue Rp ${c.revenue.toLocaleString("id-ID")}, ${c.count} orders\n`;
-    });
-
-    ctx += "\nDAILY REVENUE (all days, sorted by date):\n";
-    s.dailyTrend.forEach(d=>{
-      ctx += `  ${d.date}: Rp ${d.revenue.toLocaleString("id-ID")}, Volume ${Math.round(d.qty).toLocaleString("id-ID")} kg\n`;
-    });
-
-    const sorted = [...s.dailyTrend].sort((a,b)=>a.revenue-b.revenue);
-    if (sorted.length) {
-      ctx += `\nLOWEST REVENUE DAY: ${sorted[0].date} — Rp ${sorted[0].revenue.toLocaleString("id-ID")}\n`;
-      ctx += `HIGHEST REVENUE DAY: ${sorted[sorted.length-1].date} — Rp ${sorted[sorted.length-1].revenue.toLocaleString("id-ID")}\n`;
+    // ── DP / BATAL ────────────────────────────────────────────
+    ctx += "\n=== DP / BATAL ===\n";
+    const batal = s.nonSales.filter(r=>r.txType==="BATAL");
+    const dp    = s.nonSales.filter(r=>r.txType==="DP");
+    const um    = s.nonSales.filter(r=>r.txType.includes("UANG"));
+    ctx += `BATAL: ${batal.length} invoices\n`;
+    ctx += `DP: ${dp.length} invoices, Total ${idr(dp.reduce((a,r)=>a+r.total,0))}\n`;
+    ctx += `Uang Muka: ${um.length} invoices, Total ${idr(um.reduce((a,r)=>a+r.total,0))}\n`;
+    if (batal.length) {
+      ctx += "Cancelled invoices: " + batal.map(r=>`${r.invNo} ${r.customer} ${idr(r.total)}`).join(", ") + "\n";
     }
+
+    // ── ANALYTICS ─────────────────────────────────────────────
+    ctx += "\n=== ANALYTICS ===\n";
+    ctx += `Revenue/active day: ${idr(Math.round(s.dailyAvg))} (${s.activeDays} active days)\n`;
+    ctx += `Avg price/kg: ${idr(Math.round(s.revenuePerKg))}\n`;
+    ctx += `Top 5 customer concentration: ${s.top5pct.toFixed(1)}% of total revenue\n`;
+    ctx += `Top 1 customer concentration: ${s.top1pct.toFixed(1)}% (${s.topByRev[0]?.name})\n`;
+    ctx += `Biggest single invoice: ${idr(s.biggestInv?.total||0)} — ${s.biggestInv?.customer}\n`;
+    ctx += `Best day: ${s.bestDay?.date} ${idr(s.bestDay?.revenue||0)}\n`;
+    ctx += "Invoice size distribution: " + s.bucketData.map(b=>`${b.name}: ${b.value}`).join(", ") + "\n";
+    const one=s.custArr.filter(c=>c.count===1).length;
+    const two5=s.custArr.filter(c=>c.count>=2&&c.count<=5).length;
+    const six10=s.custArr.filter(c=>c.count>=6&&c.count<=10).length;
+    const over10=s.custArr.filter(c=>c.count>10).length;
+    ctx += `Customer loyalty: One-time ${one}, Repeat 2-5x ${two5}, Loyal 6-10x ${six10}, VIP >10x ${over10}\n`;
 
     return ctx;
   };
