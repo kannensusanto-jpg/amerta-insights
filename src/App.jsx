@@ -937,6 +937,17 @@ export default function App() {
       ctx += `  ${i+1}. ${c.name}: Revenue Rp ${c.revenue.toLocaleString("id-ID")}, ${c.count} orders\n`;
     });
 
+    ctx += "\nDAILY REVENUE (all days, sorted by date):\n";
+    s.dailyTrend.forEach(d=>{
+      ctx += `  ${d.date}: Rp ${d.revenue.toLocaleString("id-ID")}, Volume ${Math.round(d.qty).toLocaleString("id-ID")} kg\n`;
+    });
+
+    const sorted = [...s.dailyTrend].sort((a,b)=>a.revenue-b.revenue);
+    if (sorted.length) {
+      ctx += `\nLOWEST REVENUE DAY: ${sorted[0].date} — Rp ${sorted[0].revenue.toLocaleString("id-ID")}\n`;
+      ctx += `HIGHEST REVENUE DAY: ${sorted[sorted.length-1].date} — Rp ${sorted[sorted.length-1].revenue.toLocaleString("id-ID")}\n`;
+    }
+
     return ctx;
   };
 
