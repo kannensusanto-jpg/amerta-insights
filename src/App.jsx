@@ -344,6 +344,17 @@ export default function App() {
     reader.readAsArrayBuffer(file);
   }, []);
 
+  const downloadBudgetTemplate = useCallback(() => {
+    const months = data?.months?.length ? data.months : MONTH_ORDER;
+    const salespeople = s?.spArr?.length ? s.spArr.map(sp => sp.name) : ["Salesperson 1", "Salesperson 2"];
+    const header = ["Salesperson", ...months];
+    const rows = salespeople.map(sp => [sp, ...months.map(() => 0)]);
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Budget");
+    XLSX.writeFile(wb, "amerta-budget-template.xlsx");
+  }, [data, s]);
+
   const loadBudget = useCallback((file) => {
     if (!file) return;
     const reader = new FileReader();
@@ -1003,6 +1014,11 @@ export default function App() {
               {data && (
                 <button className="swap-btn swap-btn-outline" onClick={()=>window.print()}>
                   ⬇ Export PDF
+                </button>
+              )}
+              {data && (
+                <button className="swap-btn swap-btn-outline" onClick={downloadBudgetTemplate}>
+                  ⬇ Budget Template
                 </button>
               )}
               <button className="swap-btn swap-btn-outline" style={{position:"relative"}}>
