@@ -344,17 +344,6 @@ export default function App() {
     reader.readAsArrayBuffer(file);
   }, []);
 
-  const downloadBudgetTemplate = useCallback(() => {
-    const months = data?.months?.length ? data.months : MONTH_ORDER;
-    const salespeople = s?.spArr?.length ? s.spArr.map(sp => sp.name) : ["Salesperson 1", "Salesperson 2"];
-    const header = ["Salesperson", ...months];
-    const rows = salespeople.map(sp => [sp, ...months.map(() => 0)]);
-    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Budget");
-    XLSX.writeFile(wb, "amerta-budget-template.xlsx");
-  }, [data, s]);
-
   const loadBudget = useCallback((file) => {
     if (!file) return;
     const reader = new FileReader();
@@ -486,6 +475,17 @@ export default function App() {
 
     return { totalRev,totalQty,totalPPN,avgInv,revenuePerKg,invoiceCount:sales.length,custCount:custArr.length,typeCounts,typeSlices,topByRev,topByQty,topByOrders,custArr,dailyTrend,activeDays,dailyAvg,bestDay,top5pct,top1pct,biggestInv,bucketData,nonSales,spArr,momTrend,spTrend,topSPs };
   }, [rows, data, activeMonth, budget]);
+
+  const downloadBudgetTemplate = useCallback(() => {
+    const months = data?.months?.length ? data.months : MONTH_ORDER;
+    const salespeople = s?.spArr?.length ? s.spArr.map(sp => sp.name) : ["Salesperson 1", "Salesperson 2"];
+    const header = ["Salesperson", ...months];
+    const dataRows = salespeople.map(sp => [sp, ...months.map(() => 0)]);
+    const ws = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Budget");
+    XLSX.writeFile(wb, "amerta-budget-template.xlsx");
+  }, [data, s]);
 
   const TABS = [
     {id:"overview",  label:"Overview"},
