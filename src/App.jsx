@@ -213,7 +213,8 @@ const css = `
   .prog-pct { font-size: 10px; color: #94A3B8; width: 40px; text-align: right; font-family: 'DM Mono', monospace; }
 
   /* ── TYPE TAGS ── */
-  .type-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .type-tag  { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .type-sale  { background: #EFF6FF; color: #1B3D8F; }
   .type-dp    { background: #F0FDF4; color: #059669; }
   .type-um    { background: #FFFBEB; color: #D97706; }
   .type-batal { background: #FEF2F2; color: #DC2626; }
@@ -493,6 +494,7 @@ export default function App() {
     {id:"sales",     label:"Salesperson"},
     {id:"nonsale",   label:"DP / Batal"},
     {id:"analytics", label:"Analytics"},
+    {id:"invoices",  label:"Invoices"},
     {id:"askai",     label:"Ask AI ✦"},
   ];
 
@@ -901,6 +903,73 @@ export default function App() {
   };
 
   // ══════════════════════════════════════════════════════════
+  // INVOICES
+  // ══════════════════════════════════════════════════════════
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+
+  const renderInvoices = () => {
+    const allSales = data.allRows;
+    const q = invoiceSearch.toLowerCase();
+    const filtered = q
+      ? allSales.filter(r =>
+          r.invNo.toLowerCase().includes(q) ||
+          r.customer.toLowerCase().includes(q) ||
+          r.sales.toLowerCase().includes(q) ||
+          r.txType.toLowerCase().includes(q) ||
+          r.month.toLowerCase().includes(q)
+        )
+      : allSales;
+
+    return (
+      <>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+          <input
+            className="chat-input"
+            style={{maxWidth:340}}
+            placeholder="Search invoice, customer, salesperson…"
+            value={invoiceSearch}
+            onChange={e=>setInvoiceSearch(e.target.value)}
+          />
+          <span style={{fontSize:12,color:"#94A3B8"}}>{filtered.length.toLocaleString()} rows</span>
+        </div>
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>No. Invoice</th>
+                <th>Bulan</th>
+                <th>Tanggal</th>
+                <th>Customer</th>
+                <th>Sales</th>
+                <th>Tipe</th>
+                <th className="num">Qty (kg)</th>
+                <th className="num">Total (Rp)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.slice(0,500).map((r,i)=>(
+                <tr key={i}>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:NAVY}}>{r.invNo}</td>
+                  <td style={{fontSize:11,color:"#64748B"}}>{r.month}</td>
+                  <td style={{fontSize:11,color:"#94A3B8"}}>{fmtDate(r.date)}</td>
+                  <td>{r.customer}</td>
+                  <td style={{fontSize:11,color:"#64748B"}}>{r.sales}</td>
+                  <td><span className={`type-tag ${r.txType==="Sale"?"type-sale":r.txType==="DP"?"type-dp":r.txType.includes("UANG")?"type-um":"type-batal"}`}>{r.txType}</span></td>
+                  <td className="num">{r.qty>0?Math.round(r.qty).toLocaleString("id-ID"):"—"}</td>
+                  <td className="num">{r.total>0?fmt(r.total):"—"}</td>
+                </tr>
+              ))}
+              {filtered.length>500 && (
+                <tr><td colSpan={8} style={{textAlign:"center",color:"#94A3B8",padding:12,fontSize:12}}>Showing 500 of {filtered.length.toLocaleString()} rows — use search to filter</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </>
+    );
+  };
+
+  // ══════════════════════════════════════════════════════════
   // ASK AI
   // ══════════════════════════════════════════════════════════
   const buildContext = () => {
@@ -991,6 +1060,14 @@ export default function App() {
     const six10=s.custArr.filter(c=>c.count>=6&&c.count<=10).length;
     const over10=s.custArr.filter(c=>c.count>10).length;
     ctx += `Customer loyalty: One-time ${one}, Repeat 2-5x ${two5}, Loyal 6-10x ${six10}, VIP >10x ${over10}\n`;
+
+    // ── RAW INVOICES ──────────────────────────────────────────
+    ctx += "\n=== ALL INVOICES (raw) ===\n";
+    ctx += "Format: InvoiceNo | Month | Date | Customer | Salesperson | Type | Qty kg | Total Rp\n";
+    const sorted = [...data.allRows].sort((a,b)=>(a.date?.getTime()||0)-(b.date?.getTime()||0));
+    sorted.forEach(r => {
+      ctx += `${r.invNo} | ${r.month} | ${fmtDate(r.date)} | ${r.customer} | ${r.sales} | ${r.txType} | ${Math.round(r.qty)} | ${Math.round(r.total)}\n`;
+    });
 
     return ctx;
   };
@@ -1129,6 +1206,7 @@ export default function App() {
                 {tab==="sales"     && renderSalesTab()}
                 {tab==="nonsale"   && renderNonSale()}
                 {tab==="analytics" && renderAnalytics()}
+                {tab==="invoices"  && renderInvoices()}
                 {tab==="askai"     && renderAskAI()}
               </>
             )}
