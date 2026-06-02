@@ -1026,6 +1026,18 @@ export default function App() {
     ctx += `Loyalty: 1x:${s.custArr.filter(c=>c.count===1).length} 2-5x:${s.custArr.filter(c=>c.count>=2&&c.count<=5).length} 6-10x:${s.custArr.filter(c=>c.count>=6&&c.count<=10).length} >10x:${s.custArr.filter(c=>c.count>10).length}\n`;
 
     // Timelines (first/last per SP and customer)
+    // Top customers per salesperson
+    ctx += "\nTOP CUSTOMERS PER SALESPERSON:\n";
+    const spCustMap = {};
+    data.allRows.filter(r=>r.txType==="Sale").forEach(r=>{
+      if (!spCustMap[r.sales]) spCustMap[r.sales] = {};
+      spCustMap[r.sales][r.customer] = (spCustMap[r.sales][r.customer]||0) + r.total;
+    });
+    Object.entries(spCustMap).forEach(([sp, custs])=>{
+      const top = Object.entries(custs).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      ctx += `${sp}: ${top.map(([c,v],i)=>`${i+1}.${c}:Rp${m(v)}Jt`).join(", ")}\n`;
+    });
+
     ctx += "\nFIRST/LAST SALE per SP:\n";
     const spTL = {};
     data.allRows.filter(r=>r.txType==="Sale"&&r.date).forEach(r=>{
