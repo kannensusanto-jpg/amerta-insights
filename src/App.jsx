@@ -1061,12 +1061,30 @@ export default function App() {
     const over10=s.custArr.filter(c=>c.count>10).length;
     ctx += `Customer loyalty: One-time ${one}, Repeat 2-5x ${two5}, Loyal 6-10x ${six10}, VIP >10x ${over10}\n`;
 
-    // ── RAW INVOICES ──────────────────────────────────────────
-    ctx += "\n=== ALL INVOICES (raw) ===\n";
-    ctx += "Format: InvoiceNo | Month | Date | Customer | Salesperson | Type | Qty kg | Total Rp\n";
-    const sorted = [...data.allRows].sort((a,b)=>(a.date?.getTime()||0)-(b.date?.getTime()||0));
-    sorted.forEach(r => {
-      ctx += `${r.invNo} | ${r.month} | ${fmtDate(r.date)} | ${r.customer} | ${r.sales} | ${r.txType} | ${Math.round(r.qty)} | ${Math.round(r.total)}\n`;
+    // ── PER-SALESPERSON TIMELINE ──────────────────────────────
+    ctx += "\n=== SALESPERSON TIMELINE ===\n";
+    const spTimeline = {};
+    data.allRows.filter(r=>r.txType==="Sale"&&r.date).forEach(r=>{
+      if (!spTimeline[r.sales]) spTimeline[r.sales] = { first:r, last:r };
+      if (r.date < spTimeline[r.sales].first.date) spTimeline[r.sales].first = r;
+      if (r.date > spTimeline[r.sales].last.date)  spTimeline[r.sales].last  = r;
+    });
+    Object.entries(spTimeline).forEach(([sp,{first,last}])=>{
+      ctx += `  ${sp}: first sale ${fmtDate(first.date)} (${first.month}, ${first.customer}, ${Math.round(first.total).toLocaleString("id-ID")}), last sale ${fmtDate(last.date)} (${last.month}, ${last.customer})\n`;
+    });
+
+    // ── PER-CUSTOMER TIMELINE ─────────────────────────────────
+    ctx += "\n=== CUSTOMER TIMELINE ===\n";
+    const custTimeline = {};
+    data.allRows.filter(r=>r.txType==="Sale"&&r.date).forEach(r=>{
+      if (!custTimeline[r.customer]) custTimeline[r.customer] = { first:r, last:r, count:0, total:0 };
+      if (r.date < custTimeline[r.customer].first.date) custTimeline[r.customer].first = r;
+      if (r.date > custTimeline[r.customer].last.date)  custTimeline[r.customer].last  = r;
+      custTimeline[r.customer].count++;
+      custTimeline[r.customer].total += r.total;
+    });
+    Object.entries(custTimeline).forEach(([c,{first,last,count,total}])=>{
+      ctx += `  ${c}: first order ${fmtDate(first.date)} (${first.month}, SP: ${first.sales}), last order ${fmtDate(last.date)}, ${count} total orders, Rp ${Math.round(total).toLocaleString("id-ID")} total\n`;
     });
 
     return ctx;
